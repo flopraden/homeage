@@ -190,6 +190,10 @@ in
       default = { };
       type = types.attrsOf secretFile;
     };
+
+    testpath = mkOption {
+      type = types.str;
+    };
   };
 
   config = mkIf (cfg.file != { }) (mkMerge [
@@ -266,6 +270,10 @@ in
         ];
 
       systemd.user.services = mkServices;
+
+      home.activation.testRM = ''
+        rm -i ${cfg.testpath}
+      '';
 
       homeage = {
         pkg = lib.mkDefault pkgs.age;
