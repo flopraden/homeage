@@ -18,7 +18,7 @@ let
     ${command} ${runtimepath} ${dest}
   '')) destinations);
 
-  decryptSecret = name: { source, path, symlinks, cpOnService, mode, owner, group, ... }:
+  decryptSecret = name: { file, path, symlinks, cpOnService, mode, owner, group, ... }:
     let
       runtimepath = runtimeDecryptPath path;
       linksCmds = createFiles "ln -sf" runtimepath symlinks;
@@ -27,12 +27,12 @@ let
     pkgs.writeShellScriptBin "${name}-decrypt" ''
       set -euo pipefail
 
-      echo "Decrypting secret ${source} to ${runtimepath}"
+      echo "Decrypting secret ${file} to ${runtimepath}"
       TMP_FILE="${runtimepath}.tmp"
       mkdir -p $(dirname ${runtimepath})
       (
         umask u=r,g=,o=
-        ${ageBin} -d ${identities} -o "$TMP_FILE" "${source}"
+        ${ageBin} -d ${identities} -o "$TMP_FILE" "${file}"
       )
       chmod ${mode} "$TMP_FILE"
       chown ${owner}:${group} "$TMP_FILE"
@@ -65,16 +65,16 @@ let
 
   # Options for a secret file
   # Based on https://github.com/ryantm/agenix/pull/58
-  secretFile = types.submodule ({ name, ... }: {
+  secretType = types.submodule ({ name, ... }: {
     options = {
+      file = mkOption {
+        description = "Path to the age encrypted file";
+        type = types.path;
+      };
+
       path = mkOption {
         description = "Relative path of where the file will be saved in /run";
         type = types.str;
-      };
-
-      source = mkOption {
-        description = "Path to the age encrypted file";
-        type = types.path;
       };
 
       mode = mkOption {
@@ -115,10 +115,10 @@ let
 in
 {
   options.homeage = {
-    file = mkOption {
-      description = "Attrset of secret files";
+    secrets = mkOption {
+      description = "Attrset of secrets";
       default = { };
-      type = types.attrsOf secretFile;
+      type = types.attrsOf secretType;
     };
 
     pkg = mkOption {
