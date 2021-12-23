@@ -78,7 +78,7 @@ While the following below is immense, its mostly just home manager flake boilerp
             # CHECK HERE for homeage configuration
             homeage.identityPaths = [ "~/.ssh/id_ed25519" ];
             homeage.file."pijulsecretkey" = {
-              source = ./secretkey.json.age;
+              file = ./secretkey.json.age;
               path = "pijul/secretkey.json";
               symlinks = [ "${config.xdg.configHome}/pijul/secretkey.json" ];
             };
