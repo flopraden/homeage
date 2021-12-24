@@ -164,7 +164,7 @@ in
     };
   };
 
-  config = mkIf (cfg.file != { }) (mkMerge [
+  config = mkIf (cfg.secrets != { }) (mkMerge [
     {
       assertions = [{
         assertion = cfg.identityPaths != [ ];
