@@ -39,7 +39,7 @@ let
       ${copiesCmds}
     '';
 
-  activationScript = builtins.concatStringsSep "\n" (lib.attrsets.mapAttrsToList decryptSecret cfg.file);
+  activationScript = builtins.concatStringsSep "\n" (lib.attrsets.mapAttrsToList decryptSecret cfg.secrets);
 
   mkServices = lib.attrsets.mapAttrs'
     (name: value:
@@ -67,7 +67,7 @@ let
           };
         })
     )
-    cfg.file;
+    cfg.secrets;
 
   # Options for a secret file
   # Based on https://github.com/ryantm/agenix/pull/58
