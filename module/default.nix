@@ -235,7 +235,7 @@ in
       };
 
       systemd.user.services = mkIf (sSecrets != { }) mkServices // mkServicePathServices;
-      systemd.user.services = mkIf (sSecrets != { }) mkPathServices;
+      systemd.user.paths = mkIf (sSecrets != { }) mkPathServices;
     }
   ]);
 }
