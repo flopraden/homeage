@@ -77,7 +77,7 @@ let
   mkPathServices = builtins.listToAttrs (
     map ( path: 
           lib.attrsets.nameValuePair
-            (builtins.replaceStrings ["/" " "] ["-" "-"] path)
+            (builtins.replaceStrings ["/" " "] ["-" "-"] (lib.strings.removePrefix "/" path))
             ({
                Unit = {
                  Description = "Wait for ${path} keyfile";
@@ -111,7 +111,7 @@ let
 	       };
             })
         )
-    	cfg.identityPaths);
+    	(builtins.attrNames mkPathServices));
 
     
   # Options for a secret file
@@ -234,7 +234,7 @@ in
         homeage = hm.dag.entryAfter [ "writeBoundary" ] activationScript;
       };
 
-      systemd.user.services = mkIf (sSecrets != { }) mkServices // mkServicePathServices;
+      systemd.user.services = mkIf (sSecrets != { }) (mkServices // mkServicePathServices);
       systemd.user.paths = mkIf (sSecrets != { }) mkPathServices;
     }
   ]);
