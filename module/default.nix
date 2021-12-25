@@ -55,6 +55,7 @@ let
         ({
           Unit = {
             Description = "Decrypt ${name} secret";
+	    ConditionFileNotEmpty = (map (path: "|${path}") cfg.identityPaths); 
           };
 
           Service = {
