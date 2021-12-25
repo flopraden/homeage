@@ -100,7 +100,7 @@ let
             (name)
             ({
                Unit = {
-                 Description = "Decrypt secrets with ${path} keyfile";
+                 Description = "Decrypt secrets with ${name} keyfile";
 	         Wants = (map (unit: "${unit}-secret.service") (builtins.attrNames sSecrets));
                };
 
