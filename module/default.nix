@@ -55,7 +55,7 @@ let
         ({
           Unit = {
             Description = "Decrypt ${name} secret";
-	    ConditionPathExists = ["!${runtimeDecryptPath value.path}"]; 
+	    #ConditionPathExists = ["!${runtimeDecryptPath value.path}"]; 
           };
 
           Service = {
