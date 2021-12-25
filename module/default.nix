@@ -39,7 +39,14 @@ let
       ${copiesCmds}
     '';
 
-  activationScript = builtins.concatStringsSep "\n" (lib.attrsets.mapAttrsToList decryptSecret cfg.secrets);
+  aSecrets = lib.attrsets.filterAttrs
+     (n: v: (v.installationType == "activation") || ((cfg.installationType == "activation") && (v.installationType == "global")) )
+     cfg.secrets;
+  sSecrets = lib.attrsets.filterAttrs
+     (n: v: (v.installationType == "service") || ((cfg.installationType == "service") && (v.installationType == "global")) )
+     cfg.secrets;
+
+  activationScript = builtins.concatStringsSep "\n" (lib.attrsets.mapAttrsToList decryptSecret aSecrets);
 
   mkServices = lib.attrsets.mapAttrs'
     (name: value:
@@ -67,7 +74,7 @@ let
           };
         })
     )
-    cfg.secrets;
+    sSecrets;
 
   # Options for a secret file
   # Based on https://github.com/ryantm/agenix/pull/58
@@ -111,6 +118,20 @@ let
         type = types.listOf types.str;
         default = [ ];
         description = "Copy decrypted file to absolute paths";
+      };
+
+      installationType = mkOption {
+        description = ''
+          Specify the way how secrets should be installed. Either via systemd user services (<literal>service</literal>)
+          or during the activation of the generation (<literal>activation</literal>).
+	  By default, <literal>activation</literal> is to use the <literal>homeage.installationType</literal> config
+	  in global homeage configuration.
+          </para><para>
+          Note: Keep in mind that symlinked secrets will not work after reboots with <literal>activation</literal> if
+          <literal>homeage.mount</literal> does not point to persistent location.
+        '';
+        default = "global";
+        type = types.enum [ "global" "activation" "service" ];
       };
     };
 
@@ -171,11 +192,11 @@ in
         message = "secret.identityPaths must be set.";
       }];
 
-      home.activation = mkIf (cfg.installationType == "activation") {
+      home.activation = mkIf (aSecrets != { }) {
         homeage = hm.dag.entryAfter [ "writeBoundary" ] activationScript;
       };
 
-      systemd.user.services = mkIf (cfg.installationType == "service") mkServices;
+      systemd.user.services = mkIf (sSecrets != { }) mkServices;
     }
   ]);
 }
