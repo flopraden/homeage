@@ -40,10 +40,10 @@ let
     '';
 
   aSecrets = lib.attrsets.filterAttrs
-     (n: v: (v.installationType == "activation") || ( (cfg.installationType == "activation") && (v.installationType == "global") )
+     (n: v: (v.installationType == "activation") || ((cfg.installationType == "activation") && (v.installationType == "global")) )
      cfg.secrets;
   sSecrets = lib.attrsets.filterAttrs
-     (n: v: (v.installationType == "service") || ( (cfg.installationType == "service") && (v.installationType == "global") )
+     (n: v: (v.installationType == "service") || ((cfg.installationType == "service") && (v.installationType == "global")) )
      cfg.secrets;
 
   activationScript = builtins.concatStringsSep "\n" (lib.attrsets.mapAttrsToList decryptSecret aSecrets);
