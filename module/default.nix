@@ -55,8 +55,7 @@ let
         ({
           Unit = {
             Description = "Decrypt ${name} secret";
-	    TimeoutStartSec = "infinity";
-	    ConditionFileNotEmpty = (map (path: "|${path}") cfg.identityPaths); 
+	    ConditionPathExists = ["!${value.path}"]; 
           };
 
           Service = {
@@ -68,16 +67,53 @@ let
 
               ${decryptSecret name value}
             ''}";
+	    Restart = "on-failure";
+	    RestartSec = "20s";
             Environment = "PATH=${makeBinPath [ pkgs.coreutils ]}";
-          };
-
-          Install = {
-            WantedBy = [ "default.target" ];
           };
         })
     )
     sSecrets;
+  mkPathServices = builtins.listToAttrs (
+    map ( path: 
+          lib.attrsets.nameValuePair
+            (builtins.replaceStrings ["/" " "] ["-" "-"] path)
+            ({
+               Unit = {
+                 Description = "Wait for ${path} keyfile";
+               };
 
+               Path = {
+	         PathExists= "${path}";
+               };
+
+               Install = {
+                 WantedBy = [ "default.target" ];
+               };
+            })
+        )
+    	cfg.identityPaths);
+
+  mkServicePathServices = builtins.listToAttrs (
+    map ( name: 
+          lib.attrsets.nameValuePair
+            (name)
+            ({
+               Unit = {
+                 Description = "Decrypt secrets with ${path} keyfile";
+	         Wants = (map (unit: "${unit}-secret.service") (builtins.attrNames sSecrets));
+               };
+
+               Service = {
+                 Type = "oneshot";
+		 ExecStart = "${pkgs.coreutils}/bin/true";
+		 RemainAfterExit = "yes";
+	       };
+            })
+        )
+    	cfg.identityPaths);
+
+    
   # Options for a secret file
   # Based on https://github.com/ryantm/agenix/pull/58
   secretType = types.submodule ({ name, ... }: {
@@ -198,7 +234,8 @@ in
         homeage = hm.dag.entryAfter [ "writeBoundary" ] activationScript;
       };
 
-      systemd.user.services = mkIf (sSecrets != { }) mkServices;
+      systemd.user.services = mkIf (sSecrets != { }) mkServices // mkServicePathServices;
+      systemd.user.services = mkIf (sSecrets != { }) mkPathServices;
     }
   ]);
 }
