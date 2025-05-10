@@ -156,7 +156,7 @@ with lib; let
   # Based on https://github.com/ryantm/agenix/pull/58
   secretType = types.submodule ({ name, ... }: {
     options = {
-      file = mkOption {
+      source = mkOption {
         description = "Path to the age encrypted file";
         type = types.path;
       };
