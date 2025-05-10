@@ -196,6 +196,13 @@ with lib; let
         default = [];
         description = "Copy decrypted file to absolute paths";
       };
+      
+      systemdService = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = "Systemd service dependent to this secret";
+      };
+
     };
   });
 in {
@@ -220,6 +227,12 @@ in {
 
     identityPaths = mkOption {
       description = "Absolute path to identity files used for age decryption. Must provide at least one path";
+      default = [];
+      type = types.listOf types.str;
+    };
+
+    systemdRequires = mkOption {
+      description = "List of service to wait before trying to decrypt secrets";
       default = [];
       type = types.listOf types.str;
     };
@@ -335,11 +348,13 @@ in {
               {
                 Unit = {
                   Description = "Decrypt ${name} secret";
+		  After = cfg.systemdRequires;
                 };
 
                 Service = {
                   Type = "oneshot";
                   Environment = "PATH=${makeBinPath [pkgs.coreutils pkgs.diffutils]}";
+  		  Requires = cfg.systemdRequires;
                   ExecStart = "${pkgs.writeShellScript "${name}-decrypt" ''
                     set -euo pipefail
                     DRY_RUN_CMD=
@@ -365,8 +380,23 @@ in {
               }
           )
           cfg.secrets;
+        dependServices = lib.attrsets.mapAttrs'
+          (
+            name: value:
+              lib.attrsets.nameValuePair
+              value.systemdService
+              {
+                Unit = {
+		  After = [ "${name}-secret.service"];
+                };
+                Service = {
+  		  Requires = [ "${name}-secret.service"];
+                };
+              }
+          )
+          (lib.filterAttrs (n: v: v.systemdService != null) cfg.secrets);
       in
-        mkServices;
+        mkServices // dependServices;
     })
   ]);
 }
