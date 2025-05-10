@@ -197,10 +197,10 @@ with lib; let
         description = "Copy decrypted file to absolute paths";
       };
       
-      systemdService = mkOption {
-        type = types.nullOr types.str;
-        default = null;
-        description = "Systemd service dependent to this secret";
+      systemdServices = mkOption {
+        type = types.listOf types.str;
+        default = [];
+        description = "Systemd services dependent to this secret";
       };
 
     };
@@ -349,12 +349,12 @@ in {
                 Unit = {
                   Description = "Decrypt ${name} secret";
 		  After = cfg.systemdRequires;
+  		  Requires = cfg.systemdRequires;
                 };
 
                 Service = {
                   Type = "oneshot";
                   Environment = "PATH=${makeBinPath [pkgs.coreutils pkgs.diffutils]}";
-  		  Requires = cfg.systemdRequires;
                   ExecStart = "${pkgs.writeShellScript "${name}-decrypt" ''
                     set -euo pipefail
                     DRY_RUN_CMD=
@@ -380,23 +380,19 @@ in {
               }
           )
           cfg.secrets;
-        dependServices = lib.attrsets.mapAttrs'
-          (
-            name: value:
-              lib.attrsets.nameValuePair
-              value.systemdService
+	rdepends = builtins.concatLists (builtins.attrValues ( builtins.mapAttrs (name: value: builtins.map (v: {inherit name; requiredBy=v;}) value.systemdServices) cfg.secrets));
+	depends = builtins.mapAttrs (name: value:
+           let req = (builtins.map (v: "${v.name}-secret.service") value); in
               {
                 Unit = {
-		  After = [ "${name}-secret.service"];
+		  After = req;
+  		  Requires = req;
                 };
-                Service = {
-  		  Requires = [ "${name}-secret.service"];
-                };
-              }
-          )
-          (lib.filterAttrs (n: v: v.systemdService != null) cfg.secrets);
+	      }
+	 )
+         (builtins.groupBy (n: n.requiredBy) rdepends);	
       in
-        mkServices // dependServices;
+        mkServices // depends;
     })
   ]);
 }
